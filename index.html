@@ -1,0 +1,789 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🖥️ Screen Share - Telegram Web App</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary: #0088cc;
+            --success: #00a884;
+            --danger: #e53935;
+            --warning: #ff9800;
+            --dark: #1e1e1e;
+            --light: #f8f9fa;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 0;
+            margin: 0;
+        }
+
+        .app-container {
+            max-width: 100%;
+            min-height: 100vh;
+            background: white;
+            border-radius: 0;
+            overflow: hidden;
+        }
+
+        .header {
+            background: var(--primary);
+            color: white;
+            padding: 20px;
+            text-align: center;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .header h1 {
+            font-size: 24px;
+            margin-bottom: 5px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .header p {
+            opacity: 0.9;
+            font-size: 14px;
+        }
+
+        .main-content {
+            padding: 20px;
+        }
+
+        .card {
+            background: var(--light);
+            border-radius: 16px;
+            padding: 20px;
+            margin-bottom: 20px;
+            border-left: 4px solid var(--primary);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+        }
+
+        .btn {
+            width: 100%;
+            padding: 16px 20px;
+            border: none;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            text-decoration: none;
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #0077b3;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0, 136, 204, 0.3);
+        }
+
+        .btn-success {
+            background: var(--success);
+            color: white;
+        }
+
+        .btn-danger {
+            background: var(--danger);
+            color: white;
+        }
+
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none !important;
+        }
+
+        .video-container {
+            width: 100%;
+            background: var(--dark);
+            border-radius: 12px;
+            overflow: hidden;
+            margin-bottom: 20px;
+            display: none;
+            position: relative;
+        }
+
+        #previewVideo {
+            width: 100%;
+            max-width: 100%;
+            border-radius: 12px;
+        }
+
+        .video-overlay {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: rgba(0,0,0,0.7);
+            color: white;
+            padding: 8px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            backdrop-filter: blur(10px);
+        }
+
+        .controls-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+
+        .info-panel {
+            background: white;
+            border: 2px solid #e9ecef;
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 20px;
+        }
+
+        .info-item {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+            padding: 8px 0;
+            border-bottom: 1px solid #f1f3f4;
+        }
+
+        .info-item:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+        }
+
+        .info-label {
+            font-weight: 500;
+            color: #5f6368;
+        }
+
+        .info-value {
+            font-weight: 600;
+            color: var(--dark);
+        }
+
+        .quality-selector {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 8px;
+            margin-bottom: 20px;
+        }
+
+        .quality-btn {
+            padding: 12px 8px;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            background: white;
+            cursor: pointer;
+            text-align: center;
+            transition: all 0.3s ease;
+            font-size: 12px;
+        }
+
+        .quality-btn.active {
+            border-color: var(--primary);
+            background: var(--primary);
+            color: white;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px 20px;
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid var(--primary);
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            margin-left: 10px;
+        }
+
+        .status-online {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .status-offline {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .feature-list {
+            list-style: none;
+            padding: 0;
+        }
+
+        .feature-list li {
+            padding: 8px 0;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .instructions {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 15px 0;
+            font-size: 14px;
+        }
+
+        @media (max-width: 768px) {
+            .main-content {
+                padding: 15px;
+            }
+            
+            .controls-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .quality-selector {
+                grid-template-columns: 1fr;
+            }
+            
+            .btn {
+                padding: 14px 16px;
+                font-size: 15px;
+            }
+        }
+
+        /* Анимации */
+        .fade-in {
+            animation: fadeIn 0.5s ease-in;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .pulse {
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <div class="header">
+            <h1>🖥️ Screen Share</h1>
+            <p>Демонстрация экрана в реальном времени</p>
+        </div>
+
+        <div class="main-content">
+            <!-- Карточка статуса -->
+            <div id="statusCard" class="card fade-in">
+                <h3>Готов к работе <span id="statusBadge" class="status-badge status-offline">ОФФЛАЙН</span></h3>
+                <p>Выберите источник для начала трансляции</p>
+            </div>
+
+            <!-- Секция настройки -->
+            <div id="setupSection" class="fade-in">
+                <div class="card">
+                    <h3>🚀 Начать трансляцию</h3>
+                    <p>Выберите что вы хотите транслировать:</p>
+                    
+                    <button class="btn btn-primary pulse" onclick="startScreenShare('entire-screen')">
+                        🖥️ Весь экран
+                    </button>
+                    
+                    <button class="btn btn-primary" onclick="startScreenShare('application-window')">
+                        🪟 Окно приложения
+                    </button>
+                    
+                    <button class="btn btn-primary" onclick="startScreenShare('browser-tab')">
+                        🌐 Вкладка браузера
+                    </button>
+                </div>
+
+                <div class="card">
+                    <h3>⚡ Настройки качества</h3>
+                    <p>Выберите подходящее качество трансляции:</p>
+                    
+                    <div class="quality-selector">
+                        <div class="quality-btn active" onclick="setQuality('low')">
+                            📱 Низкое<br>
+                            <small>720p • 15fps</small>
+                        </div>
+                        <div class="quality-btn" onclick="setQuality('medium')">
+                            💻 Среднее<br>
+                            <small>1080p • 25fps</small>
+                        </div>
+                        <div class="quality-btn" onclick="setQuality('high')">
+                            🎥 Высокое<br>
+                            <small>1440p • 30fps</small>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="info-panel">
+                    <div class="info-item">
+                        <span class="info-label">📡 Статус:</span>
+                        <span class="info-value" id="statusText">Ожидание запуска</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">⚡ Качество:</span>
+                        <span class="info-value" id="qualityText">Среднее (1080p)</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">🔊 Звук:</span>
+                        <span class="info-value" id="audioText">Включен</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Секция трансляции -->
+            <div id="streamSection" class="hidden">
+                <div class="video-container" id="videoContainer">
+                    <video id="previewVideo" autoplay muted playsinline></video>
+                    <div class="video-overlay">
+                        <span id="fpsOverlay">FPS: 0</span>
+                    </div>
+                </div>
+
+                <div class="controls-grid">
+                    <button class="btn btn-secondary" onclick="switchSource()">
+                        🔄 Сменить источник
+                    </button>
+                    <button class="btn btn-danger" onclick="stopScreenShare()">
+                        🛑 Остановить
+                    </button>
+                </div>
+
+                <div class="info-panel">
+                    <div class="info-item">
+                        <span class="info-label">📏 Разрешение:</span>
+                        <span class="info-value" id="resolutionText">-</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">⏱️ Длительность:</span>
+                        <span class="info-value" id="durationText">00:00</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">📊 FPS:</span>
+                        <span class="info-value" id="fpsText">0</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Секция загрузки -->
+            <div id="loadingSection" class="loading hidden">
+                <div class="spinner"></div>
+                <h3>Подключаемся к вашему экрану...</h3>
+                <p>Пожалуйста, разрешите доступ к экрану в появившемся окне</p>
+            </div>
+
+            <!-- Инструкция -->
+            <div class="card">
+                <h3>💡 Инструкция по использованию</h3>
+                <ul class="feature-list">
+                    <li>✅ <strong>Выберите источник</strong> - весь экран, окно или вкладку</li>
+                    <li>✅ <strong>Разрешите доступ</strong> - в диалоговом окне браузера</li>
+                    <li>✅ <strong>Настройте качество</strong> - для оптимальной производительности</li>
+                    <li>✅ <strong>Делитесь ссылкой</strong> - для совместного просмотра</li>
+                </ul>
+                
+                <div class="instructions">
+                    <strong>⚠️ Важно:</strong> Для лучшей работы используйте браузер Chrome или Edge. 
+                    Firefox также поддерживается, но может иметь ограничения.
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        class ScreenShareApp {
+            constructor() {
+                this.stream = null;
+                this.mediaRecorder = null;
+                this.startTime = null;
+                this.fpsCounter = 0;
+                this.fps = 0;
+                this.quality = 'medium';
+                this.audioEnabled = true;
+                this.videoElement = document.getElementById('previewVideo');
+                this.tg = window.Telegram.WebApp;
+                this.durationInterval = null;
+                this.fpsInterval = null;
+                
+                this.initTelegram();
+                this.setupEventListeners();
+            }
+
+            initTelegram() {
+                // Инициализация Telegram Web App
+                this.tg.expand();
+                this.tg.enableClosingConfirmation();
+                this.tg.BackButton.show();
+                this.tg.BackButton.onClick(() => this.stopScreenShare());
+                
+                // Устанавливаем цвет тему Telegram
+                this.tg.setHeaderColor('#0088cc');
+                this.tg.setBackgroundColor('#667eea');
+                
+                console.log('Telegram Web App инициализирован');
+            }
+
+            setupEventListeners() {
+                // Обработка закрытия страницы
+                window.addEventListener('beforeunload', () => {
+                    if (this.stream) {
+                        this.stopScreenShare();
+                    }
+                });
+
+                // Обработка видимости страницы
+                document.addEventListener('visibilitychange', () => {
+                    if (document.hidden && this.stream) {
+                        this.updateStatus('Страница неактивна', 'warning');
+                    }
+                });
+            }
+
+            async startScreenShare(sourceType = 'entire-screen') {
+                try {
+                    this.showLoading();
+                    this.updateStatus('Запрашиваем доступ к экрану...', 'info');
+                    
+                    const displayMediaOptions = {
+                        video: {
+                            cursor: "always",
+                            displaySurface: sourceType === 'entire-screen' ? "monitor" : 
+                                          sourceType === 'application-window' ? "window" : "browser"
+                        },
+                        audio: this.audioEnabled && this.quality !== 'low'
+                    };
+
+                    // Настройки качества
+                    this.applyQualitySettings(displayMediaOptions);
+
+                    this.stream = await navigator.mediaDevices.getDisplayMedia(displayMediaOptions);
+                    
+                    this.setupStream();
+                    this.showStream();
+                    this.updateStatus('Трансляция активна 🟢', 'success');
+                    this.updateStatusBadge('ОНЛАЙН', 'online');
+                    
+                    // Обработка окончания трансляции пользователем
+                    this.stream.getTracks().forEach(track => {
+                        track.onended = () => {
+                            this.stopScreenShare();
+                            this.updateStatus('Трансляция остановлена пользователем', 'info');
+                        };
+                    });
+
+                    // Отправляем данные в Telegram
+                    this.sendToTelegram('screen_share_started', {
+                        quality: this.quality,
+                        source: sourceType,
+                        audio: this.audioEnabled
+                    });
+
+                } catch (error) {
+                    console.error('Ошибка захвата экрана:', error);
+                    this.handleError(error);
+                }
+            }
+
+            applyQualitySettings(options) {
+                const qualitySettings = {
+                    'low': {
+                        width: { ideal: 1280 },
+                        height: { ideal: 720 },
+                        frameRate: { ideal: 15 },
+                        bitrate: 2500000
+                    },
+                    'medium': {
+                        width: { ideal: 1920 },
+                        height: { ideal: 1080 },
+                        frameRate: { ideal: 25 },
+                        bitrate: 5000000
+                    },
+                    'high': {
+                        width: { ideal: 2560 },
+                        height: { ideal: 1440 },
+                        frameRate: { ideal: 30 },
+                        bitrate: 8000000
+                    }
+                };
+
+                Object.assign(options.video, qualitySettings[this.quality]);
+            }
+
+            setupStream() {
+                this.videoElement.srcObject = this.stream;
+                this.startTime = Date.now();
+                
+                // Получаем информацию о разрешении
+                const videoTrack = this.stream.getVideoTracks()[0];
+                const settings = videoTrack.getSettings();
+                document.getElementById('resolutionText').textContent = 
+                    `${settings.width}x${settings.height}`;
+                
+                // Запускаем отсчет времени и FPS
+                this.startDurationTimer();
+                this.startFPSCounter();
+
+                // Обработка метаданных видео
+                this.videoElement.addEventListener('loadedmetadata', () => {
+                    this.videoElement.play().catch(console.error);
+                });
+
+                // Счетчик FPS на основе обновления кадров
+                this.videoElement.addEventListener('timeupdate', () => {
+                    this.fpsCounter++;
+                });
+            }
+
+            startDurationTimer() {
+                this.durationInterval = setInterval(() => {
+                    if (this.startTime) {
+                        const duration = Math.floor((Date.now() - this.startTime) / 1000);
+                        const minutes = Math.floor(duration / 60);
+                        const seconds = duration % 60;
+                        document.getElementById('durationText').textContent = 
+                            `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+                    }
+                }, 1000);
+            }
+
+            startFPSCounter() {
+                this.fpsInterval = setInterval(() => {
+                    this.fps = this.fpsCounter;
+                    this.fpsCounter = 0;
+                    document.getElementById('fpsText').textContent = this.fps;
+                    document.getElementById('fpsOverlay').textContent = `FPS: ${this.fps}`;
+                }, 1000);
+            }
+
+            stopScreenShare() {
+                // Останавливаем таймеры
+                if (this.durationInterval) clearInterval(this.durationInterval);
+                if (this.fpsInterval) clearInterval(this.fpsInterval);
+                
+                // Останавливаем поток
+                if (this.stream) {
+                    this.stream.getTracks().forEach(track => track.stop());
+                    this.stream = null;
+                }
+                
+                // Очищаем видео элемент
+                this.videoElement.srcObject = null;
+                
+                // Показываем интерфейс настройки
+                this.showSetup();
+                this.updateStatus('Трансляция остановлена', 'info');
+                this.updateStatusBadge('ОФФЛАЙН', 'offline');
+                
+                // Скрываем кнопку назад в Telegram
+                this.tg.BackButton.hide();
+                
+                // Отправляем событие в Telegram
+                this.sendToTelegram('screen_share_stopped');
+            }
+
+            async switchSource() {
+                this.stopScreenShare();
+                // Даем время на очистку перед новым запуском
+                setTimeout(() => {
+                    this.startScreenShare('entire-screen');
+                }, 1000);
+            }
+
+            setQuality(quality) {
+                this.quality = quality;
+                
+                // Обновление UI кнопок качества
+                document.querySelectorAll('.quality-btn').forEach(btn => {
+                    btn.classList.remove('active');
+                });
+                event.target.classList.add('active');
+                
+                // Обновление текста качества
+                const qualityTexts = {
+                    'low': 'Низкое (720p)',
+                    'medium': 'Среднее (1080p)', 
+                    'high': 'Высокое (1440p)'
+                };
+                document.getElementById('qualityText').textContent = qualityTexts[quality];
+                
+                // Обновление настроек аудио
+                this.audioEnabled = quality !== 'low';
+                document.getElementById('audioText').textContent = 
+                    this.audioEnabled ? 'Включен' : 'Выключен';
+                
+                this.updateStatus(`Качество изменено на: ${qualityTexts[quality]}`, 'info');
+            }
+
+            updateStatus(message, type = 'info') {
+                const statusElement = document.getElementById('statusText');
+                statusElement.textContent = message;
+                
+                // Можно добавить цветовое кодирование статусов
+                statusElement.style.color = 
+                    type === 'success' ? '#28a745' : 
+                    type === 'error' ? '#dc3545' : 
+                    type === 'warning' ? '#ffc107' : '#6c757d';
+            }
+
+            updateStatusBadge(text, type) {
+                const badge = document.getElementById('statusBadge');
+                badge.textContent = text;
+                badge.className = `status-badge status-${type}`;
+            }
+
+            showLoading() {
+                document.getElementById('setupSection').classList.add('hidden');
+                document.getElementById('streamSection').classList.add('hidden');
+                document.getElementById('loadingSection').classList.remove('hidden');
+            }
+
+            showStream() {
+                document.getElementById('setupSection').classList.add('hidden');
+                document.getElementById('loadingSection').classList.add('hidden');
+                document.getElementById('streamSection').classList.remove('hidden');
+                document.getElementById('videoContainer').style.display = 'block';
+            }
+
+            showSetup() {
+                document.getElementById('streamSection').classList.add('hidden');
+                document.getElementById('loadingSection').classList.add('hidden');
+                document.getElementById('setupSection').classList.remove('hidden');
+            }
+
+            handleError(error) {
+                let errorMessage = 'Неизвестная ошибка';
+                
+                if (error.name === 'NotAllowedError') {
+                    errorMessage = 'Доступ к экрану запрещен. Разрешите доступ в настройках браузера.';
+                } else if (error.name === 'NotFoundError') {
+                    errorMessage = 'Не найдено подходящего источника для захвата.';
+                } else if (error.name === 'NotSupportedError') {
+                    errorMessage = 'Ваш браузер не поддерживает захват экрана.';
+                } else if (error.name === 'AbortError') {
+                    errorMessage = 'Операция захвата была прервана.';
+                } else {
+                    errorMessage = `Ошибка: ${error.message}`;
+                }
+                
+                this.updateStatus(errorMessage, 'error');
+                this.showSetup();
+                this.hideLoading();
+            }
+
+            hideLoading() {
+                document.getElementById('loadingSection').classList.add('hidden');
+            }
+
+            sendToTelegram(event, data = {}) {
+                if (this.tg && this.tg.sendData) {
+                    this.tg.sendData(JSON.stringify({
+                        event: event,
+                        timestamp: Date.now(),
+                        ...data
+                    }));
+                }
+            }
+        }
+
+        // Глобальный экземпляр приложения
+        let app;
+
+        // Функции для вызова из HTML
+        function startScreenShare(sourceType) {
+            if (!app) {
+                app = new ScreenShareApp();
+            }
+            app.startScreenShare(sourceType);
+        }
+
+        function stopScreenShare() {
+            if (app) {
+                app.stopScreenShare();
+            }
+        }
+
+        function switchSource() {
+            if (app) {
+                app.switchSource();
+            }
+        }
+
+        function setQuality(quality) {
+            if (app) {
+                app.setQuality(quality);
+            }
+        }
+
+        // Инициализация при загрузке страницы
+        document.addEventListener('DOMContentLoaded', function() {
+            app = new ScreenShareApp();
+            
+            // Проверяем поддержку API
+            if (!navigator.mediaDevices || !navigator.mediaDevices.getDisplayMedia) {
+                app.updateStatus('Ваш браузер не поддерживает захват экрана', 'error');
+                document.querySelectorAll('.btn-primary').forEach(btn => {
+                    btn.disabled = true;
+                });
+            }
+        });
+
+        // Глобальная обработка ошибок
+        window.addEventListener('error', function(e) {
+            console.error('Global error:', e.error);
+        });
+    </script>
+</body>
+</html>
